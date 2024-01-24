@@ -49,9 +49,11 @@ pipeline {
                         // Add commands to create a cron job
                         sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} '(crontab -l ; echo \"0 5 * * * cd ${PROD_DIR} && /usr/bin/python3 recommendations.py\") | crontab -'"
                         echo "Cron job for recommendations.py created!"
+        
                     } else {
                         echo "Cron job already exists. Skipping creation."
                     }
+                    echo "Neo4J script for generating recommendations deployed"
                 }
             }
         }      
