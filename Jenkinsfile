@@ -5,10 +5,6 @@ pipeline {
         PROD_USERNAME = 'amedikusettor'
         PROD_SERVER = '35.239.170.49'
         PROD_DIR = '/home/amedikusettor/myflix/recommendations'
-        DOCKER_IMAGE_NAME = 'recommendations-deployment'
-        DOCKER_CONTAINER_NAME = 'recommendations'
-        DOCKER_CONTAINER_PORT = '6001'
-        DOCKER_HOST_PORT = '6001'
     }
 
     stages {
@@ -23,36 +19,41 @@ pipeline {
             steps {
                 script {
                     sh 'echo Packaging files ...'
-                    sh 'rm -f movieupload_files.tar.gz || true'
-                    sh 'tar -czf movieupload_files.tar.gz * || true'
-                    sh "scp -o StrictHostKeyChecking=no movieupload_files.tar.gz ${PROD_USERNAME}@${PROD_SERVER}:${PROD_DIR}"
+                    sh 'rm -f recommendation_files.tar.gz || true'
+                    sh 'tar -czf recommendation_files.tar.gz * || true'
+                    sh "scp -o StrictHostKeyChecking=no recommendation_files.tar.gz ${PROD_USERNAME}@${PROD_SERVER}:${PROD_DIR}"
                     sh 'echo Files transferred to server. Unpacking ...'
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'pwd && cd myflix/recommendations && tar -xzf movieupload_files.tar.gz && ls -l'"
-                    sh 'echo Repo unloaded on Prod. Server. Preparing to dockerize application ..'
+                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && tar -xzf recommendation_files.tar.gz && ls -l'"
+                    sh 'echo Repo unloaded on Prod. Server. Preparing to install libraries ..'
                 }
             }
         }
 
-        stage('Dockerize ') {
+        stage('Install Libraries') {
             steps {
                 script {
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && docker build -t ${DOCKER_IMAGE_NAME} .'"
-                    sh "echo Docker image for Recommendations rebuilt. Preparing to redeploy container to web..."
+                    // Add commands to install necessary libraries on the server
+                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'sudo apt-get update && sudo apt-get install -y python3-pip'"
+                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'pip3 install pymongo neo4j-driver pytz'"
+                    sh "echo Libraries installed. Preparing to create cron job for recommendations.py"
                 }
             }
         }
-
-        stage('Redeploy Container to Web') {
+        stage('Create Cron Job') {
             steps {
                 script {
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && docker stop ${DOCKER_CONTAINER_NAME} || echo \"Failed to stop container\"'"
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && docker rm ${DOCKER_CONTAINER_NAME} || echo \"Failed to remove container\"'"
-                    sh "echo Container stopped and removed. Preparing to redeploy new version"
+                    // Check if the cron job already exists
+                    def cronExists = sh(script: "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'crontab -l | grep -q \"${PROD_DIR}\"'", returnStatus: true) == 0
 
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && docker run -d -p ${DOCKER_HOST_PORT}:${DOCKER_CONTAINER_PORT} --name ${DOCKER_CONTAINER_NAME} ${DOCKER_IMAGE_NAME}'"
-                    sh "echo Recommendations script Deployed!"
+                    if (!cronExists) {
+                        // Add commands to create a cron job
+                        sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} '(crontab -l ; echo \"0 5 * * * cd ${PROD_DIR} && /usr/bin/python3 recommendations.py\") | crontab -'"
+                        echo "Cron job for recommendations.py created!"
+                    } else {
+                        echo "Cron job already exists. Skipping creation."
+                    }
                 }
             }
-        }
+        }      
     }
 }
