@@ -10,18 +10,25 @@ escaped_username = quote_plus(username)
 escaped_password = quote_plus(password)
 mongo_uri = f'mongodb://{escaped_username}:{escaped_password}@35.239.170.49:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.1.1'
 mongo_client = MongoClient(mongo_uri)
-mongo_db = mongo_client['recommendationInput']
+mongo_db = mongo_client['userInput']
 selected_videos_collection = mongo_db['selectedVideos']
 
 # Function to save recommended videos back to MongoDB
 
 
 def save_recommended_videos_to_mongo(recommended_videos):
-    # Combine all recommendations into a single document
-    combined_recommendations = {"recommendations": recommended_videos}
+    # Combine all recommendations into a single document with a timestamp
+    combined_recommendations = {
+        "timestamp": datetime.now(pytz.utc),
+        "recommendations": recommended_videos
+    }
 
     # Insert the combined recommendations into the 'recommendedVideos' collection
     mongo_db['recommendedVideos'].insert_one(combined_recommendations)
+
+
+# Main function
+
 
 def main():
     try:
