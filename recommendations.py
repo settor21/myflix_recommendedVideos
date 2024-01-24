@@ -17,10 +17,11 @@ selected_videos_collection = mongo_db['selectedVideos']
 
 
 def save_recommended_videos_to_mongo(recommended_videos):
-    mongo_db['recommendedVideos'].insert_many(recommended_videos)
+    # Combine all recommendations into a single document
+    combined_recommendations = {"recommendations": recommended_videos}
 
-# Main function
-
+    # Insert the combined recommendations into the 'recommendedVideos' collection
+    mongo_db['recommendedVideos'].insert_one(combined_recommendations)
 
 def main():
     try:
