@@ -23,7 +23,7 @@ pipeline {
                     sh 'tar -czf recommendation_files.tar.gz * || true'
                     sh "scp -o StrictHostKeyChecking=no recommendation_files.tar.gz ${PROD_USERNAME}@${PROD_SERVER}:${PROD_DIR}"
                     sh 'echo Files transferred to server. Unpacking ...'
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && tar -xzf recommendation_files.tar.gz && ls -l'"
+                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'cd myflix/recommendations && rm -f recommendations.py || true && tar -xzf recommendation_files.tar.gz && ls -l'"
                     sh 'echo Repo unloaded on Prod. Server. Preparing to install libraries ..'
                 }
             }
