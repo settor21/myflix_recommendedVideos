@@ -33,7 +33,7 @@ pipeline {
             steps {
                 script {
                     // Add commands to install necessary libraries on the server
-                    sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'sudo apt-get update && sudo apt-get install -y python3-pip'"
+                    // sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'sudo apt-get update && sudo apt-get install -y python3-pip'"
                     sh "ssh -o StrictHostKeyChecking=no ${PROD_USERNAME}@${PROD_SERVER} 'pip3 install pymongo neo4j-driver pytz'"
                     sh "echo Libraries installed. Preparing to create cron job for recommendations.py"
                 }
